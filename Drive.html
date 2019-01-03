@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<style>
+	<style>
+		body {
+			overflow: hidden;
+		}
+		div {
+		  position: absolute;
+		  top: 0px;
+		  width: 100%;
+		  padding: 10px;
+		  text-align: center;  
+		  color: #ffff00
+		}
+		
+		
+	</style>
+</style>
+</head>
+
+<body> 
+	<div id="info">press Enter to change Viewport</div>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/96/three.min.js"></script>
+	<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+	<script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
+<script>
+var randerer, camera, camera3rd, controls, scene;
+var car,loader;
+var keyboard = new KeyboardState();
+var clock;
+var pos = new THREE.Vector3();
+var speed, angle, vel;
+var start = false;
+var trees = [];
+var sitck, sitck2;
+let check = false;
+(function() {
+  Math.clamp = function(val,min,max){
+    return Math.min(Math.max(val,min),max);
+    
+  }})();
+
+init();
+animate();
+
+function checkIntersect (R, C, Rad){ //(Rectangle, Center, Radius)
+	var max =R.max;
+  var min =R.min;
+	if(max.x<0){
+  	if(max.z<0) {
+    	return (max.x*max.x+max.z*max.z<Rad*Rad);   
+    }
+    else if(min.z>0) {
+    	return (max.x*max.x+min.z*min.z<Rad*Rad);
+    }
+    else{
+    	return (Math.abs(max.x)<Rad);
+    } 
+  }
+  else if(min.x>0){
+    if(min.z>0) {
+        return (min.x*min.x+min.z*min.z<Rad*Rad);   
+      }
+      else if(max.z<0) {
+        return (min.x*min.x+max.z*max.z<Rad*Rad);
+      }
+      else{
+      	return (Math.abs(min.x)<Rad);
+      }  
+  }
+  else {
+  	return (Math.abs(min.z)<Rad||Math.abs(max.z)<Rad);
+  }
+}
+
+function buildPyramid() {
+	var geometry = new THREE.Geometry();
+  geometry.vertices.push(
+    new THREE.Vector3(0, 0, 13),
+    new THREE.Vector3(50, 0, 0),
+    new THREE.Vector3(0, 13, 0),
+    new THREE.Vector3(0, 0, -13)
+  );
+
+  var face;
+  face = new THREE.Face3(0, 1, 2);
+  face.materialIndex = 0;
+  geometry.faces.push(face);
+  face = new THREE.Face3(0, 2, 3);
+  face.materialIndex = 1;
+  geometry.faces.push(face);
+  face = new THREE.Face3(1,3, 2);
+  face.materialIndex = 2;
+  geometry.faces.push(face);
+  face = new THREE.Face3(3, 1, 0);
+  face.materialIndex = 3;
+  geometry.faces.push(face);
+  geometry.computeBoundingSphere();
+  geometry.computeFaceNormals();
+  geometry.computeVertexNormals();
+
+  var materialArray = [];
+  loader.setCrossOrigin ('');
+  let right = loader.load( "https://i.imgur.com/0zjuhMo.png");
+  let  left= loader.load( "https://i.imgur.com/93BrYHO.png");
+  let orther = loader.load( "https://i.imgur.com/uGsYRnc.png");
+  
+  var t0 = new THREE.Vector2(0,0);//圖片左下角
+  var t1 = new THREE.Vector2(1,0);//圖片右下角
+  var t2 = new THREE.Vector2(1,1);//圖片右上角
+  var t3 = new THREE.Vector2(0,1);//圖片左上角
+  let uv1 = [t0,t1,t3];//選中圖片一个三角區域像素——映射到三角面1
+  let uv2 = [t0,t1,t2];//選中圖片一个三角區域像素——映射到三角面1
+  
+  geometry.faceVertexUvs[0].push(uv1);
+  geometry.faceVertexUvs[0].push(uv1);
+  geometry.faceVertexUvs[0].push(uv2);
+  geometry.faceVertexUvs[0].push(uv1);
+  materialArray.push(new THREE.MeshBasicMaterial({
+  	map: right,
+    //transparent: true, // key to cutout texture
+    side:THREE.DoubleSide}));
+  materialArray.push(new THREE.MeshBasicMaterial({
+   	map: orther,
+    //transparent: true, // key to cutout texture
+    side:THREE.DoubleSide
+  }));
+  //geometry.faceVertexUvs[0].pop(uv1);
+   materialArray.push(new THREE.MeshBasicMaterial({
+    map:left,
+    transparent: true, // key to cutout texture
+    side:THREE.DoubleSide
+  }));
+  
+  materialArray.push(new THREE.MeshBasicMaterial({
+   	map: orther,
+    //transparent: true, // key to cutout texture
+    side:THREE.DoubleSide
+  }));
+  console.log(geometry.faceVertexUvs[0].length)
+  var material = new THREE.MultiMaterial(materialArray);
+  return  new THREE.Mesh(geometry, material);
+}
+
+function buildDoubleYellowLine(length) {
+	let texture = loader.load( "https://i.imgur.com/7Imr88T.jpg" );
+  let material = new THREE.MeshBasicMaterial({ map: texture,side:THREE.DoubleSide});  
+  let line1 = new THREE.Mesh(new THREE.PlaneGeometry(length,1),material); 
+  line1.position.set(0,0.1,2);
+  line1.rotation.x = Math.PI/2;
+  let line2 = line1.clone();
+  line2.position.z = -2;
+  let line = new THREE.Object3D();
+  line.add(line1,line2);
+  return line;
+}
+
+function buildDoubleWhiteLine(length) {
+	let texture = loader.load( "https://i.imgur.com/9lQp9IC.jpg" );
+  let material = new THREE.MeshBasicMaterial({ map: texture,side:THREE.DoubleSide});  
+  let line1 = new THREE.Mesh(new THREE.PlaneGeometry(length,1),material); 
+  line1.position.set(0,0.1,2);
+  line1.rotation.x = Math.PI/2;
+  let line2 = line1.clone();
+  line2.position.z = -2;
+  let line = new THREE.Object3D();
+  line.add(line1,line2);
+  return line;
+}
+
+function buildSLines(length,material) {
+   
+  for(let i = 0; i < 9; i++) {
+    let singleLine = new THREE.Mesh(new THREE.PlaneGeometry(length,1),material);
+    singleLine.position.set(220+80*i,0.1,80);
+    singleLine.rotation.x = Math.PI/2;
+    let singleLine2 = singleLine.clone();
+    singleLine2.position.x*=-1;
+    scene.add(singleLine, singleLine2);
+  }
+
+  for(let i = 0; i < 9; i++) {
+    let singleLine = new THREE.Mesh(new THREE.PlaneGeometry(length,1),material);
+    singleLine.position.set(-220-80*i,0.1,240);
+    singleLine.rotation.x = Math.PI/2;
+    let singleLine2 = singleLine.clone();
+    singleLine2.position.x *= -1;
+    scene.add(singleLine, singleLine2)
+  }
+
+  for(let i = 0; i < 9; i++) {
+    let singleLine = new THREE.Mesh(new THREE.PlaneGeometry(length,1),material);
+    singleLine.position.set(-220-80*i,0.1,-240);
+    singleLine.rotation.x = Math.PI/2;
+    let singleLine2 = singleLine.clone();
+    singleLine2.position.x *= -1;
+    scene.add(singleLine, singleLine2)
+  }
+
+}
+
+function buildArrow() {
+	let arrowMap = loader.load( "https://i.imgur.com/oFuv6wO.png");
+  let arrowMat = new THREE.MeshBasicMaterial({
+    map: arrowMap,
+    transparent: true, // key to cutout texture
+    side:THREE.DoubleSide});
+    
+  for(let i=0; i<4;i++) {
+    let arrow = new THREE.Mesh(new THREE.PlaneGeometry(160,50),arrowMat);
+    arrow.rotation.x = Math.PI/2;
+    arrow.rotation.y = Math.PI;
+    arrow.position.set(-230,0.04,-40-80*i);
+    scene.add(arrow);
+    if(i<2) {
+      let arrow2 = arrow.clone();
+      arrow2.position.x = 230;
+      scene.add(arrow2);
+    }
+
+  }
+   for(let i=0; i<4;i++) {
+    let arrow = new THREE.Mesh(new THREE.PlaneGeometry(160,50),arrowMat);
+    arrow.rotation.x = Math.PI/2;
+    arrow.position.set(230,0.04,40+80*i);
+    scene.add(arrow);
+    if(i<2) {
+      let arrow2 = arrow.clone();
+      arrow2.position.x = -230;
+      scene.add(arrow2);
+    }
+
+  }
+}
+
+function buildTire() {
+  let tireAssembly = new THREE.Object3D();
+  let treadTex = loader.load('https://i.imgur.com/21rKfjX.jpg?2');
+  treadTex.repeat.set(6, 1)
+  treadTex.wrapS = THREE.RepeatWrapping
+  let treadMat = new THREE.MeshBasicMaterial({
+    map: treadTex,
+    side: THREE.DoubleSide
+  });
+  let geometry = new THREE.CylinderGeometry(6, 6, 6, 80, 2, true)
+  let tread = new THREE.Mesh(geometry, treadMat);
+  // parameters need to be set in initial instantiation  
+  tireAssembly.add(tread)
+
+  let tireTex = loader.load('https://i.imgur.com/5uwI1Ta.png');
+  let tireMat = new THREE.MeshBasicMaterial({
+    map: tireTex,
+    transparent: true,
+    side: THREE.DoubleSide
+  })
+  let tire = new THREE.Mesh(new THREE.CircleGeometry(10, 80), tireMat)
+  let tire1 = tire.clone();
+  tireAssembly.add(tire1)
+  tire1.rotation.x = -Math.PI / 2;
+  tire1.position.y = 3
+  tire1.position.z = 0.1;
+  let tire2 = tire.clone();
+  tire2.rotation.x = -Math.PI / 2
+  tire2.position.y = -3
+  tire2.position.z = 0.1;
+  tireAssembly.add(tire2)
+  scene.add(tireAssembly);
+  tireAssembly.rotation.x = Math.PI / 2
+  let ads = tireAssembly.clone();
+  return tireAssembly;
+}
+
+function init() {
+
+  clock = new THREE.Clock();
+
+  renderer = new THREE.WebGLRenderer ({
+    antialias: true
+  });
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  renderer.setClearColor(0x888888);
+  document.body.appendChild(renderer.domElement);
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 10000);
+  camera.position.set(0,200,300);
+  
+  camera3rd = new THREE.PerspectiveCamera(80, window.innerWidth / window.innerHeight, 1, 1000);
+  
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableKeys = false;
+  scene = new THREE.Scene();
+  var gridXZ = new THREE.GridHelper(500, 50 ,'red', 'white');
+  
+  //scene.add(gridXZ);
+  loader = new THREE.TextureLoader();
+  loader.setCrossOrigin ('');
+  let floorMap = loader.load( "https://i.imgur.com/pNhBRTv.jpg" );
+  floorMap.wrapS = THREE.RepeatWrapping;
+  floorMap.wrapT = THREE.RepeatWrapping;
+  floorMap.repeat.set(8, 8);
+  var material = new THREE.MeshBasicMaterial({ map: floorMap,side:THREE.DoubleSide});
+  //var material = new THREE.MeshNormalMaterial({side:THREE.DoubleSide});
+  var floor = new THREE.Mesh(new THREE.PlaneGeometry(1800,600),material);
+  floor.rotation.x = Math.PI/2;
+  scene.add(floor);
+  let mat =  loader.load( "https://i.imgur.com/AMSfmkT.png");
+ 
+  mat.wrapT = THREE.RepeatWrapping;
+  mat.repeat.set(1,15);
+  material = new THREE.MeshBasicMaterial({
+  	map: mat,
+    transparent: true, // key to cutout texture
+    side:THREE.DoubleSide});
+  let zebraCrossing = new THREE.Mesh(new THREE.PlaneGeometry(40,600),material);
+  zebraCrossing.rotation.x = Math.PI/2;
+  zebraCrossing.position.set(150, 0.1, 0);
+  
+  let zebraCrossing2 = zebraCrossing.clone();
+  zebraCrossing.position.set(-150, 0.1, 0);
+  scene.add(zebraCrossing,zebraCrossing2);
+  
+  let line = buildDoubleYellowLine(700);
+  line.position.x = 550;
+  let line2 = line.clone();
+  line2.position.x = -550;
+  scene.add(line, line2);
+  
+  for(let i = 0; i < 9; i++) {
+  	let DWLine = buildDoubleWhiteLine(40);
+  	DWLine.position.set(220+80*i,0.1, -80);
+    let DWLine2 = DWLine.clone();
+    DWLine2.position.x *=-1;
+    scene.add(DWLine,DWLine2);
+  }
+  let SWLmap = loader.load( "https://i.imgur.com/9lQp9IC.jpg" );
+  let SWLmat =  new THREE.MeshBasicMaterial({ map: SWLmap,side:THREE.DoubleSide});
+  
+  let straightLine = new THREE.Mesh(new THREE.PlaneGeometry(5,146),SWLmat);
+  straightLine.position.set(202,0.2,-76);
+  straightLine.rotation.x = Math.PI/2;
+  let straightLine2 = straightLine.clone();
+  straightLine2.position.x *=-1;
+  straightLine2.position.z *=-1;
+  scene.add(straightLine, straightLine2)
+  
+  buildSLines(40,SWLmat);
+  
+  buildArrow();
+  let cementMap2 = loader.load( "https://i.imgur.com/mT15ECa.jpg" );
+  let cementMap = loader.load( "https://i.imgur.com/mT15ECa.jpg" );
+  cementMap.wrapT = THREE.RepeatWrapping;
+  cementMap.wrapS = THREE.RepeatWrapping;
+  cementMap.repeat.set(20,1);
+  let grassMap = loader.load( "https://i.imgur.com/IaWDHBW.jpg" );
+  grassMap.wrapS = THREE.RepeatWrapping;
+  grassMap.repeat.set(20,1);
+  var matArray = [
+    new THREE.MeshBasicMaterial({ map: cementMap2}),
+    new THREE.MeshBasicMaterial({ map: cementMap2}),
+    new THREE.MeshBasicMaterial({ map: grassMap}),
+    new THREE.MeshBasicMaterial({ map: cementMap}),
+    new THREE.MeshBasicMaterial({ map: cementMap}),
+    new THREE.MeshBasicMaterial({ map: cementMap}),  
+  ];
+  
+  var refugeIslandMat = new THREE.MultiMaterial(matArray);
+  
+  let refugeIsland = new THREE.Mesh(new THREE.BoxGeometry(700,10,20),refugeIslandMat);
+  refugeIsland.position.set(550,5,160);
+ 
+  let refugeIsland2 = refugeIsland.clone();
+  refugeIsland2.position.x = -550;
+   scene.add(refugeIsland, refugeIsland2);
+  let refugeIsland3 = refugeIsland2.clone();
+  refugeIsland3.position.z = -160;
+  let refugeIsland4 = refugeIsland3.clone();
+  refugeIsland3.position.x = 550;
+  scene.add(refugeIsland3,refugeIsland4);
+  
+  
+  let treeMap =  loader.load( "https://i.imgur.com/vvloHr8.png");
+  let treeMat = new THREE.MeshBasicMaterial({
+    map: treeMap,
+    transparent: true, // key to cutout texture
+    side:THREE.DoubleSide});
+  for(let i = 0; i <7;i++){
+    trees.push(new THREE.Mesh(new THREE.PlaneGeometry(120,120),treeMat));
+    trees[trees.length-1].position.set(260 + 100*i,55,160 )
+    scene.add(trees[trees.length-1]);
+    trees.push(new THREE.Mesh(new THREE.PlaneGeometry(120,120),treeMat));
+    trees[trees.length-1].position.set(-260 - 100*i,55,160 )
+    scene.add(trees[trees.length-1]);
+    trees.push(new THREE.Mesh(new THREE.PlaneGeometry(120,120),treeMat));
+    trees[trees.length-1].position.set(260 + 100*i,55,-160 )
+    scene.add(trees[trees.length-1]);
+    trees.push(new THREE.Mesh(new THREE.PlaneGeometry(120,120),treeMat));
+    trees[trees.length-1].position.set(-260 - 100*i,55,-160 )
+    scene.add(trees[trees.length-1]);
+  }
+    
+  
+  
+  let stickMap = loader.load( "https://i.imgur.com/m2zjmGP.jpg");
+  let stickMat =  new THREE.MeshBasicMaterial({map: stickMap});
+  let sitckMesh = new THREE.Mesh(new THREE.CylinderGeometry(1,1,37,32),stickMat);
+  sitckMesh.rotation.x = Math.PI/2;
+  let tile1 = buildTire();
+  tile1.position.z=16
+  let tile2 = tile1.clone();
+  tile2.position.z *= -1;
+  
+  sitck = new THREE.Object3D();
+  sitck.position.y = 6.5;
+  sitck.add(sitckMesh,tile1,tile2);
+  
+  let sitckMesh2 = new THREE.Mesh(new THREE.CylinderGeometry(1,1,30,32),stickMat);
+  sitckMesh2.rotation.x = Math.PI/2;
+  let tile3 = tile2.clone();
+  tile3.position.z=12.5
+  let tile4 = tile3.clone();
+  tile4.position.z *= -1;
+  
+  sitck2 = new THREE.Object3D();
+  sitck2.position.y = 6.5;
+  sitck2.add(sitckMesh2,tile3,tile4);
+  sitck2.position.x = 25;
+  scene.add(sitck2);
+  
+  let carMesh = buildPyramid();
+  carMesh.position.set(-10,7.5,0);
+  car = new THREE.Object3D();
+  car.add(carMesh,sitck,sitck2);
+  scene.add(car);
+  
+  speed = 5.0;
+  angle = 0.0;
+  rect = {};
+  window.addEventListener('resize', onWindowResize, false);
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function update(dt) {
+
+  if ( keyboard.pressed("left") ) {
+    check = false;
+    angle += 0.02;
+    if(sitck2.rotation.y < 0.2){
+      sitck2.rotation.y +=0.02;
+      console.log('123')
+    }   
+  }
+  if ( keyboard.pressed("right") ){
+    check = false;
+    angle -= 0.02;
+    if(sitck2.rotation.y > -0.2){
+      sitck2.rotation.y -=0.02;
+    }  
+
+  }
+
+  if ( keyboard.up("right") ||keyboard.up("left") ){
+    check = true;
+
+  }
+	if ( keyboard.pressed("up") ){
+    	speed += 0.5;	
+  }
+	if(keyboard.pressed("down")) {
+    	speed -= 0.5; 
+  }
+  if(keyboard.pressed("space")) {
+    	speed = 0;
+  }  
+  
+  if(check){
+    if(sitck2.rotation.y < 0)
+      sitck2.rotation.y+=0.02;
+    else if(sitck2.rotation.y > 0)
+      sitck2.rotation.y -= 0.02
+  }
+  
+	speed = Math.clamp (speed, -20.0, 50.0);		
+	vel = new THREE.Vector3(speed,0,0);
+	
+	vel.applyAxisAngle (new THREE.Vector3(0,1,0), angle);
+	pos.add (vel.clone().multiplyScalar(dt)); 	
+}
+
+function checkHit() {
+  var rect={};
+  for(var i=0;i<5;i++){
+    var tmp = rectangle.worldToLocal(bar[i].position.clone());
+    rect.max = tmp.clone().add(new THREE.Vector3(15,0,10));
+    rect.min = tmp.clone().sub(new THREE.Vector3(15,0,10));
+    var circle=bar[i].worldToLocal(bar[i].position.clone());
+    if(checkIntersect(rect, circle,barR[i])){
+      bar[i].material.color= new THREE.Color(0xfc2d2d);
+      return true;
+    }
+    else
+      bar[i].material.color= new THREE.Color(0x43bce8);
+  }
+  return false;
+}
+
+function rotateBillboard (mesh,camera){
+    var b = mesh.position.clone();  // billboard location
+    var rotaxis = new THREE.Vector3();
+    var v, yhat, n;
+    
+    v = camera.position.clone(); // clone the camera position
+    yhat = new THREE.Vector3(0, 1, 0); // up
+    n = new THREE.Vector3(0, 0, 1); // billboard normal
+
+    v.subVectors(v, b); // v-b
+    v.sub(yhat.clone().multiplyScalar(v.dot(yhat)));
+    v.normalize(); // pxz
+
+    rotangle = Math.acos(v.dot(n));
+    rotaxis.crossVectors(n, v);
+    if (rotaxis.dot(yhat) < 0) rotangle *= -1;
+
+    mesh.rotation.y = rotangle;
+}
+
+
+function animate() {
+  controls.update();
+  keyboard.update();
+  this.whichCamera = this.whichCamera || 0;
+  if (keyboard.down("enter")) whichCamera = (whichCamera + 1) % 2;
+
+  
+  var dt = clock.getDelta();
+  //checkHit();
+  if(keyboard.down("home"))
+    start = !start;
+  if(start){
+  	sitck.rotation.z -=speed/200;
+  	sitck2.rotation.z -=speed/200;
+    update(dt);
+  }
+  	
+
+  car.position.copy(pos);
+  car.rotation.y = angle;
+  
+  
+  trees.forEach(function(tree){
+    if(whichCamera)
+      rotateBillboard(tree,car);
+    else
+      rotateBillboard(tree,camera);
+  })
+  var cameraOffset = car.localToWorld (new THREE.Vector3(-38,50,0));
+  camera3rd.position.copy(cameraOffset);
+  camera3rd.lookAt(car.localToWorld(new THREE.Vector3(10,20,0)));
+  
+  render(whichCamera);
+  requestAnimationFrame(animate);
+}
+
+function render(which) {
+  switch (which) {
+    case 0:
+      renderer.render(scene, camera);
+      break;
+    case 1:
+      renderer.render(scene, camera3rd);
+      break;
+  }
+	//renderer.render(scene, camera);
+}
+</script>
+</body>
+
+</html>

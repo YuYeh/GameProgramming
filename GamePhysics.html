@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+	<style>		
+		#info {
+			position: absolute;
+			top: 0px;
+			width: 100%;
+			font-family:Monospace;
+			font-size: 20px;
+			padding: 5px;
+			text-align: center;
+			color: #003333
+		}
+		body {
+			overflow: hidden;		
+		}	
+	</style>
+</head>
+
+<body> 
+	<div id="info"><br>Sound, BGM,<br> and Collision with BGM<br>
+		<button id="play" style="width:20%">Play</button> 
+	</div>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/96/three.min.js"></script>
+	<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+	<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+	<audio id="soundtrack" autoplay loop style="display:none">
+		<source src="sounds/bensound-summer.mp3" type='audio/mp3'>
+	</audio>
+<script>
+class Particle {
+	constructor (mesh, color, audio,rad = 10) {
+  
+  	this.pos = new THREE.Vector3();
+    this.prevPos = new THREE.Vector3();
+    this.vel = new THREE.Vector3();
+    this.force = new THREE.Vector3();
+    this.mesh = mesh;
+    this.radius = rad;
+    this.light = new THREE.PointLight (color, 1.8, 50);
+	this.audio = audio;
+    scene.add (this.light)
+    scene.add (this.mesh)   // add to scene when particle is created
+
+//console.log (color)
+		this.mesh.material.color.copy ( color );
+		this.mesh.material.emissive.copy(color);
+  }
+  update (dt) {
+    this.prevPos.copy(this.pos);
+		this.vel.add (this.force.clone().multiplyScalar (dt))
+  	this.pos.add (this.vel.clone().multiplyScalar(dt))
+    
+	this.collidingPlanes (planes);
+    this.collidingParticles(particles);
+	this.collidingWalls(walls);
+	
+    // simple collision
+  /*
+  if (this.pos.z > 100 - this.radius) {
+    	const CR = 0.9
+    	this.pos.z = 100 - this.radius
+      this.vel.z = - CR * this.vel.z;
+    }
+  */  
+		this.mesh.position.copy (this.pos)
+    this.light.position.copy (this.pos)
+    this.light.position.y += 20
+  }
+
+	collidingPlanes (planes) {
+    const EPS = 1e-3
+    const CR = 0.98
+  	for (let i = 0; i < planes.length; i++) {
+			let plane = planes[i]
+			let point = this.pos.clone().sub (plane.ptOnPl)
+      if ( point.dot(plane.normal) < EPS + this.radius) {
+	        if(this.audio)
+			this.audio.play();
+				// position correction
+      	this.pos.copy (plane.ptOnPl.clone().add (point.projectOnPlane(plane.normal)) )
+        this.pos.add (plane.normal.clone().multiplyScalar(this.radius))
+      	// velocity update
+      	this.vel.sub (plane.normal.clone().multiplyScalar ((1+CR)*this.vel.dot(plane.normal)))
+      	//return;  // assume particle collides with AT MOST one plane
+      }
+  	}
+  }
+  
+    collidingParticles(particles) {
+  	const EPS = 1e-3;
+    for (let i = 0; i < particles.length; i++) {
+      let particle = particles[i];
+    	let distance = this.pos.distanceTo(particle.pos);
+      //console.log(this.vel)
+
+      if(distance < this.radius +particle.radius&& distance != 0) {
+         if(this.audio)
+			this.audio.play();
+      	 let p1 = this.pos.clone();
+         let p2 = particle.pos.clone();
+      	 let n = p1.clone().sub(p2).normalize();
+         let v = this.vel.clone().sub(particle.vel);
+        
+         this.vel.sub (n.clone().multiplyScalar (v.dot(n)));
+         particle.vel.add(n.clone().multiplyScalar (v.dot(n)))
+         let vv = p2.clone().sub(p1);
+         //console.log(vv)
+    let overlap = (this.radius + particle.radius) - vv.length();
+    vv.normalize();
+    this.pos.copy(this.prevPos);
+     n.setLength(4);
+    this.pos.add ( vv.clone().multiplyScalar(-overlap/2));
+    particle.pos.add ( vv.clone().multiplyScalar(overlap/2));
+
+      }
+    }
+  }
+  
+	collidingWalls(walls){
+    const EPS = 1e-3
+    const CR = 0.98
+    for (let i = 0; i < walls.length; i++) {
+      let wall = walls[i]
+      let pointL = this.pos.clone().sub (wall.ptOnPlL);
+      let pointR = this.pos.clone().sub (wall.ptOnPlR);
+      let pointF = this.pos.clone().sub (wall.ptOnPlF);
+      let pointB = this.pos.clone().sub (wall.ptOnPlB);
+      //console.log(pointR)
+      //左邊
+      if ( pointL.x < 0 &&  pointL.dot(wall.normalL) < EPS + this.radius && pointL.projectOnPlane (wall.normalL).length() < wall.width/2 + this.radius + EPS) {
+        if(this.audio)
+			this.audio.play();
+		// position correction
+        this.pos.copy (wall.ptOnPlL.clone().add (pointL.projectOnPlane(wall.normalL)) )
+        this.pos.add (wall.normalL.clone().multiplyScalar(this.radius))
+        // velocity update
+        this.vel.sub (wall.normalL.clone().multiplyScalar ((1+CR)*this.vel.dot(wall.normalL)))
+        //return;  // assume particle collides with AT MOST one plane
+      } 
+      //右邊
+      if ( pointR.x > EPS && pointR.dot(wall.normalR) < EPS + this.radius&& pointR.projectOnPlane (wall.normalR).length() < wall.width/2  + this.radius + EPS) {
+        if(this.audio)
+			this.audio.play();
+		// position correction
+        this.pos.copy (wall.ptOnPlR.clone().add (pointR.projectOnPlane(wall.normalR)) )
+        this.pos.add (wall.normalR.clone().multiplyScalar(this.radius))
+        // velocity update
+        this.vel.sub (wall.normalR.clone().multiplyScalar ((1+CR)*this.vel.dot(wall.normalR)))
+        //return;  // assume particle collides with AT MOST one plane
+      } 
+      //前面
+      if (pointF.z > EPS &&pointF.dot(wall.normalF) < EPS + this.radius && pointF.projectOnPlane (wall.normalF).length() < wall.length/2 + this.radius + EPS) {
+        if(this.audio)
+			this.audio.play();
+		// position correction
+        this.pos.copy (wall.ptOnPlF.clone().add (pointF.projectOnPlane(wall.normalF)) )
+        this.pos.add (wall.normalF.clone().multiplyScalar(this.radius))
+        // velocity update
+        this.vel.sub (wall.normalF.clone().multiplyScalar ((1+CR)*this.vel.dot(wall.normalF)))
+        //return;  // assume particle collides with AT MOST one plane
+      }
+      //後面
+      if (pointB.z < 0&& pointB.dot(wall.normalB) < EPS + this.radius && pointB.projectOnPlane (wall.normalB).length() < wall.length/2  + this.radius + EPS) {
+        if(this.audio)
+			this.audio.play();
+		// position correction
+        this.pos.copy (wall.ptOnPlB.clone().add (pointB.projectOnPlane(wall.normalB)) )
+        this.pos.add (wall.normalB.clone().multiplyScalar(this.radius))
+        // velocity update
+        this.vel.sub (wall.normalB.clone().multiplyScalar ((1+CR)*this.vel.dot(wall.normalB)))
+        //return;  // assume particle collides with AT MOST one plane
+      }
+    }
+  }
+}
+
+class Plane {
+	constructor (localPointOnPlane, localNormal, mesh) {
+    this.localPtOnPl = localPointOnPlane.clone();
+		this.localNormal = localNormal.clone();
+    this.mesh = mesh;  // the graphics representation
+    scene.add (mesh)
+  }
+  update () {
+  	this.mesh.updateMatrixWorld() // important!
+  	this.ptOnPl = this.mesh.localToWorld (this.localPtOnPl.clone());
+    let normalMat = new THREE.Matrix3().getNormalMatrix (this.mesh.matrixWorld);  
+    this.normal = this.localNormal.clone().applyMatrix3 (normalMat).normalize()
+  }
+}
+
+class Wall {
+	constructor (length, width, mesh) {
+    this.length = length;
+    this.width = width;
+    this.pos = mesh.position;
+    this.localPtOnPlL = new THREE.Vector3(-length/2, 0, 0);
+    this.localPtOnPlR = new THREE.Vector3( length/2, 0, 0);
+    this.localPtOnPlF = new THREE.Vector3( 0, 0, width/2);
+    this.localPtOnPlB = new THREE.Vector3( 0, 0, -width/2);
+		this.localNormalL = new THREE.Vector3(-1, 0, 0);
+    this.localNormalR = new THREE.Vector3( 1, 0, 0);
+    this.localNormalF = new THREE.Vector3( 0, 0, 1);
+    this.localNormalB = new THREE.Vector3( 0, 0,-1);
+    this.mesh = mesh;  // the graphics representation
+    scene.add (mesh)
+  }
+  update () {
+  	this.mesh.updateMatrixWorld() // important!
+  	this.ptOnPlL = this.mesh.localToWorld (this.localPtOnPlL.clone());
+    this.ptOnPlR = this.mesh.localToWorld (this.localPtOnPlR.clone());
+    this.ptOnPlF = this.mesh.localToWorld (this.localPtOnPlF.clone());
+    this.ptOnPlB = this.mesh.localToWorld (this.localPtOnPlB.clone());
+    let normalMat = new THREE.Matrix3().getNormalMatrix (this.mesh.matrixWorld);  
+    this.normalL = this.localNormalL.clone().applyMatrix3 (normalMat).normalize();
+    this.normalR = this.localNormalR.clone().applyMatrix3 (normalMat).normalize()
+    this.normalF = this.localNormalF.clone().applyMatrix3 (normalMat).normalize()
+    this.normalB = this.localNormalB.clone().applyMatrix3 (normalMat).normalize()
+  }
+}
+
+///////////////////////////////////////////////////////////////////////
+var camera, scene, renderer, light;
+var ball,alpha = 1,type = false;
+var planes =[];
+var particles = [];
+var walls = [];
+var type = 1;
+var soundTrack;
+var variety = 1;
+var loader;
+var isPaused = true;
+$('#play').click ( function() {
+	isPaused = !isPaused;
+	if (isPaused) { 
+		$('#play').text ('Play')
+		soundTrack.pause()
+	} else {
+		$('#play').text ('Pause')
+		soundTrack.play()
+	}
+});
+
+init();
+animate();
+
+function randomPos(radius) {
+	return new THREE.Vector3( 95-radiusradius+5+Math.random()*(95-radius)*2,0, Math.random())
+}
+
+function randomColor() {
+	return "hsl(" + Math.random()*360 + ", 100%, 50%)";
+}
+function init() {
+  soundTrack = document.getElementById ("soundtrack");
+  scene = new THREE.Scene();
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 6000);
+  camera.position.set(300,600,400)
+
+	
+  var ambientLight = new THREE.AmbientLight(0x222222); // soft white light
+  scene.add(ambientLight);
+  
+  light = new THREE.PointLight(0xffffff,1);
+  light.position.set(200, 700, 0);
+  scene.add(light);
+  
+  var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
+  //scene.add(gridXZ);
+  var floor = new THREE.Mesh (new THREE.PlaneGeometry (400,400), new THREE.MeshPhongMaterial({
+  color:0x585858,
+  side:THREE.DoubleSide}))
+  floor.rotation.x = -Math.PI/2
+  floor.position.y = -0.1;
+  scene.add (floor)
+
+  renderer = new THREE.WebGLRenderer({antialias: true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x87cefa);
+
+  let controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+  document.body.appendChild(renderer.domElement);
+  ///////////////////////////////////////////////////////////
+  let disk, particle;
+  let collisionSound = new Audio("sounds/collision3.wav");
+  for(let i = 0; i < 7;i++) {
+    let geometry = new THREE.CylinderGeometry (10,10, 6, 32);
+    let material =  new THREE.MeshLambertMaterial({
+    	transparent: true,
+		opacity:0.8
+    });
+    disk = new THREE.Mesh (geometry,material );
+    particle = new Particle (disk, new THREE.Color (randomColor()), collisionSound.cloneNode());
+    particle.vel.set ( -90 + Math.random() * 180,0, -90 + Math.random() *180)
+	//particle.vel.set (0,0, 20);
+    let check = false;
+	//particle.pos.set(100*(i-1),3,0);
+    while(!check) {
+      var j;
+      particle.pos.set (  Math.random() * (380-particle.radius)-(180-particle.radius) ,3,  Math.random() * (380-particle.radius)-(180-particle.radius))
+      for(j = 0; j < particles.length; j++ ) {
+
+        if(particle.pos.distanceTo(particles[j].pos) < particle.radius + particles[j].radius){ 
+          break;
+        }
+      }
+      if(j == particles.length) check = true;
+    }
+    particles.push (particle)
+  }
+
+
+	let plane, wall
+  wall = new THREE.Mesh ( new THREE.BoxGeometry (408, 60, 4), new THREE.MeshPhongMaterial({
+    color:0xf8f8f8,
+  	transparent: true,
+    opacity:0.2
+  }) )
+  scene.add (wall)
+  wall.position.set(0,30,202)
+	plane = new Plane (new THREE.Vector3(0,0,-5), new THREE.Vector3(0,0,-1), wall)
+  plane.update()
+  planes.push (plane)
+
+  wall = new THREE.Mesh ( new THREE.BoxGeometry (408, 60, 4), new THREE.MeshPhongMaterial({
+    color:0xf8f8f8,
+  	transparent: true,
+    opacity:0.2
+  }) )
+  scene.add (wall)
+  wall.position.set(0,30,-202)
+  plane = new Plane (new THREE.Vector3(0,0,5), new THREE.Vector3(0,0,1), wall.clone())
+  plane.update()
+  planes.push (plane)
+  
+   wall = new THREE.Mesh ( new THREE.BoxGeometry (4, 60, 400), new THREE.MeshPhongMaterial({
+    color:0xf8f8f8,
+  	transparent: true,
+    opacity:0.2
+  }) )
+  scene.add (wall)
+  wall.position.set(-202,30,0)
+  plane = new Plane (new THREE.Vector3(4,0,0), new THREE.Vector3(1,0,0), wall.clone())
+  plane.update()
+  planes.push (plane)
+  
+   wall = new THREE.Mesh ( new THREE.BoxGeometry (4, 60, 400), new THREE.MeshPhongMaterial({
+    color:0xcccccc,
+  	transparent: true,
+    opacity:0.2
+  }) )
+  scene.add (wall)
+  wall.position.set(202,30,0)
+  plane = new Plane (new THREE.Vector3(-4,0,0), new THREE.Vector3(-1,0,0), wall.clone())
+  plane.update()
+  planes.push (plane)
+  
+  loader = new THREE.TextureLoader();
+  loader.setCrossOrigin ('');
+  let wallMap = loader.load( "https://i.imgur.com/anBP6AB.jpg" );
+  wallMap.wrapS = THREE.RepeatWrapping;
+  wallMap.wrapT = THREE.RepeatWrapping;
+  wallMap.repeat.set(8, 2);
+  var material = new THREE.MeshPhongMaterial({
+	map: wallMap,
+  	transparent: true,
+    opacity:0.9});
+	
+  wall = new THREE.Mesh ( new THREE.BoxGeometry (160, 60, 40), material);
+  wall.position.set(50,30,-80);
+  let wall2 = new Wall(160,40,wall.clone());
+  wall2.update();
+  walls.push(wall2);
+  wall = new THREE.Mesh ( new THREE.BoxGeometry (160, 60, 40), material)
+  wall.position.set(-50,30,80);
+
+  wall2 = new Wall(160,40,wall.clone());
+  wall2.update();
+  walls.push(wall2);
+  
+  window.addEventListener('resize', onWindowResize, false);
+}
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+function animate() {
+
+  particles.forEach (function(b) {b.update(0.1)});
+  
+  //walls.forEach(function(wall){  
+    if(walls[0].mesh.position.x + walls[0].length/2 == 180) {
+    	type = 2;
+    }
+    if(walls[0].mesh.position.x  - walls[0].length/2 == -180) {
+    	type = 1;
+    }
+    if(type ==1) {
+    	walls[0].mesh.position.x += 0.5;
+		walls[1].mesh.position.x -= 0.5;
+    } else {
+    	walls[0].mesh.position.x -= 0.5;
+		walls[1].mesh.position.x += 0.5;
+    }
+    
+    walls[0].update();
+	walls[1].update();
+ // })
+  
+  //	ball.update (0.1)
+  requestAnimationFrame(animate);
+  render();
+  if(!isPaused) {
+	if(alpha >= 1.4 || alpha <= 0.9)variety = !variety;
+
+  alpha = variety? alpha+0.02:alpha-0.02;
+  renderer.setClearColor(0x87cefa,alpha);
+  }
+  
+}
+
+function render() {
+  renderer.render(scene, camera);
+}
+
+window.focus();
+</script>
+</body>
+
+</html>

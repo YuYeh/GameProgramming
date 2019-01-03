@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<style>
+	<style>
+		body {
+			overflow: hidden;
+		}
+		#info {
+			position: absolute;
+			top: 0px;
+			width: 100%;
+			padding: 10px;
+			text-align: center;
+			color: #ffff00
+		}
+
+		
+
+		
+		
+	</style>
+</style>
+</head>
+
+<body> 
+	<div id="info">3 DOF arm</div>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/97/three.min.js"></script>
+	<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+	<script src="https://jyunming-chen.github.io/game3js/js/ccdsys.js"></script>
+
+<script>
+	var threeDOF = {
+	  theta0: 0,
+	  theta1: 0,
+	  theta2: 0,
+	  target: new THREE.Vector3(),
+
+	  init: function() {
+
+		let base = new THREE.Object3D();
+		//base.add (new THREE.AxisHelper(20))
+		loader.setCrossOrigin ('');
+		//let material = new THREE.MeshNormalMaterial()
+		let metal = loader.load("textures/metal.jpeg");
+		metal.wrapS = THREE.RepeatWrapping;
+		metal.wrapT = THREE.RepeatWrapping;
+		metal.repeat.set(10, 10);
+		let material = new THREE.MeshLambertMaterial({map:metal})
+
+		let cylinder0 = new THREE.Mesh (new THREE.CylinderGeometry(15,15,5,64),material)
+		base.add (cylinder0)
+		cylinder0.position.set (0,2.5,0)
+		let cylinder1 = new THREE.Mesh (new THREE.CylinderGeometry(8,8,40,64),material)
+		base.add (cylinder1)
+		cylinder1.position.set (0,20,0)
+
+		this.motor1 = new THREE.Object3D();
+		//this.motor1.add (new THREE.AxisHelper(20))
+		let wrap = new THREE.Object3D();
+		this.motor1.add (wrap)
+		let body = new THREE.Mesh (new THREE.CylinderGeometry(8,8,30,64), material)
+		wrap.add (body)
+		body.position.set (0,5,0)
+		wrap.rotation.z = -Math.PI/2
+
+		this.link1 = new THREE.Object3D();
+		//this.link1.add (new THREE.AxisHelper(20))
+		//body = new THREE.Mesh (new THREE.BoxGeometry(10,50,20), material)
+		body = this.makeArm(10,5, 35, 10);
+		body.rotation.set(Math.PI/2,Math.PI/2,0);
+		this.link1.add (body)
+		//body.position.y =12
+
+		this.link2 = new THREE.Object3D();
+
+		//this.link2.add (new THREE.AxisHelper(20))
+		//body = new THREE.Mesh (new THREE.BoxGeometry(10,40,20), material)
+		body = this.makeArm(5,2, 32, 10);
+		body.rotation.set(Math.PI/2,Math.PI/2,0);
+		this.link2.add (body)
+		//body.position.y =8
+
+		base.add (this.motor1)
+		this.motor1.position.y = 46
+		this.motor1.add (this.link1)
+		this.link1.position.x = 20
+		this.link1.add (this.link2)
+		this.link2.position.set (-10, 30, 0)
+
+		base.traverse (
+		  function (mesh) {
+			if (mesh instanceof THREE.Mesh) {
+			  mesh.castShadow = true;
+			  mesh.receiveShadow = true;
+			}
+		  }
+		);
+
+		return base
+		/*
+		let body = new THREE.Object3D();
+
+		this.torso = new THREE.Mesh(new THREE.BoxGeometry(50, 100, 30), new THREE.MeshNormalMaterial());
+		this.torso.position.set(0, 50, 0);
+		body.add(this.torso);
+
+		let arm, boxGeometry;
+		this.upperArm = new THREE.Object3D();
+		boxGeometry = new THREE.BoxGeometry(10, 40, 10);
+		arm = new THREE.Mesh(boxGeometry, new THREE.MeshNormalMaterial());
+		this.upperArm.add(arm);
+		arm.position.set(-5, -20, 0);
+		body.add(this.upperArm);
+		this.upperArm.position.set(-25, 100, 0);
+
+		this.lowerArm = new THREE.Object3D();
+		boxGeometry = new THREE.BoxGeometry(10, 60, 10);
+		arm = new THREE.Mesh(boxGeometry, new THREE.MeshNormalMaterial());
+		this.lowerArm.add(arm);
+		arm.position.set(-5, -30, 0);
+		this.lowerArm.position.set(0, -40, 0);
+		this.upperArm.add(this.lowerArm);
+
+		return body; 
+	*/    
+	  },
+	  update: function (theta) {
+		this.theta0 = theta[0];
+		this.theta1 = theta[1]
+		this.theta2 = theta[2]
+
+		this.motor1.rotation.y = this.theta0
+		this.link1.rotation.x = this.theta1; 
+		this.link2.rotation.x = this.theta2; 
+	  },
+	  makeArm: function (r1, r2, a, d) {
+		let x1 = (r1*r1-r1*r2)/a
+		let y1 = (r1*Math.sqrt(-r2*r2+2*r1*r2-r1*r1+a*a))/a
+		let x2 = (-r2*r2+r1*r2+a*a)/a
+		let y2 = (r2*Math.sqrt(-r2*r2+2*r1*r2-r1*r1+a*a))/a
+
+		let armShape = new THREE.Shape();
+		armShape.moveTo (x1,y1)
+		armShape.absarc (0,0,r1,Math.atan2(y1,x1),Math.atan2(-y1,x1))
+		armShape.lineTo (x2,-y2)
+		armShape.absarc (a,0,r2,Math.atan2(-y2,x2-a),Math.atan2(y2,x2-a))  
+		armShape.lineTo (x1,y1)
+
+		let extrudeSettings = {
+		  depth: d,
+		  bevelEnabled: false,
+		};
+		let geometry = new THREE.ExtrudeGeometry(armShape, extrudeSettings);
+		let material = new THREE.MeshLambertMaterial({map: loader.load("textures/metal.jpeg")})
+		let mesh = new THREE.Mesh(geometry, material);
+		return mesh
+	  }
+
+
+	}
+	/////////////////////////
+
+	var camera, scene, renderer;
+	//var motor1, link1, link2;
+	//var theta0, theta1, theta2
+	var base, loader;
+	var zz = 80;
+	var sign = 1;
+	var theta = 0;
+
+	init();
+	animate();
+
+	/*
+	function makeArm (r1, r2, a, d) {
+		let x1 = (r1*r1-r1*r2)/a
+	  let y1 = (r1*Math.sqrt(-r2*r2+2*r1*r2-r1*r1+a*a))/a
+	  let x2 = (-r2*r2+r1*r2+a*a)/a
+	  let y2 = (r2*Math.sqrt(-r2*r2+2*r1*r2-r1*r1+a*a))/a
+
+		let armShape = new THREE.Shape();
+	  armShape.moveTo (x1,y1)
+	  armShape.absarc (0,0,r1,Math.atan2(y1,x1),Math.atan2(-y1,x1))
+	  armShape.lineTo (x2,-y2)
+	  armShape.absarc (a,0,r2,Math.atan2(-y2,x2-a),Math.atan2(y2,x2-a))  
+	  armShape.lineTo (x1,y1)
+
+	  let extrudeSettings = {
+		depth: d,
+		bevelEnabled: false,
+	  };
+	  let geometry = new THREE.ExtrudeGeometry(armShape, extrudeSettings);	
+	  let mesh = new THREE.Mesh(geometry, new THREE.MeshNormalMaterial());
+		return mesh
+	}*/
+
+	// forward kinematics
+	function fk(q, joints) {
+	  joints[0].set (0,0,0)
+
+	  var localzero = new THREE.Vector3(0, 0, 0);
+	  var m = new THREE.Matrix4();
+	  m.multiply(new THREE.Matrix4().makeTranslation(0, 46, 0));
+	  m.multiply(new THREE.Matrix4().makeRotationY(q[0]));
+	  localzero.applyMatrix4(m);
+	  joints[1].copy(localzero);
+
+	  m.multiply(new THREE.Matrix4().makeTranslation(20, 0, 0));
+	  m.multiply (new THREE.Matrix4().makeRotationX(q[1]));
+	  localzero.set(0, 0, 0);
+	  localzero.applyMatrix4(m);
+	  joints[2].copy(localzero);
+
+	  m.multiply(new THREE.Matrix4().makeTranslation(-5, 30, 0));
+	  m.multiply(new THREE.Matrix4().makeRotationX(q[2]));
+	  localzero.set(0, 0, 0);
+	  localzero.applyMatrix4(m);
+	  joints[3].copy(localzero);
+
+	  m.multiply(new THREE.Matrix4().makeTranslation(0, 32, 0));
+	  localzero.set(0, 0, 0);
+	  localzero.applyMatrix4(m);
+	  joints[4].copy(localzero);
+	}
+
+	function randomColor() {
+	  return "hsl(" + Math.random()*360 + ", 100%, 50%)";
+	}
+
+	function init() {
+	  scene = new THREE.Scene();
+
+	  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
+	  camera.position.set(100, 150, 300);
+
+	  var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
+	  //scene.add(gridXZ);
+
+	  renderer = new THREE.WebGLRenderer();
+	  renderer.setSize(window.innerWidth, window.innerHeight);
+	  renderer.setClearColor(0x888888);
+
+	  renderer.shadowMap.enabled = true;
+	  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+	  document.body.appendChild(renderer.domElement);
+
+
+	  let controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+	  let color = randomColor();
+	  let cicleMat = new THREE.MeshLambertMaterial({
+		color:color,
+		transparent: true,
+		opacity:0.7
+	  });
+	  let cicle = new THREE.Mesh(new THREE.TorusGeometry(40,5,2,64),cicleMat);
+	  cicle.position.set(0, 60, -55);
+	  cicle.receiveShadow = true;
+	  scene.add(cicle)
+	  let tsphereleMat = new THREE.MeshLambertMaterial({color:color});
+	  tsphere = new THREE.Mesh (new THREE.SphereGeometry(5),tsphereleMat);
+	  scene.add (tsphere)
+	  tsphere.receiveShadow = true
+	  tsphere.castShadow = true;
+
+	  let ambient = new THREE.AmbientLight(0x444444);
+	  scene.add(ambient);
+
+	  let spotLight = new THREE.SpotLight(0xffffff,1);
+	  spotLight.castShadow = true;
+	  spotLight.position.set(0,120,100);
+	  spotLight.angle = Math.PI / 3;
+	  scene.add(spotLight);
+	  //scene.add(new THREE.SpotLightHelper( spotLight ));
+	  //scene.add ( new THREE.CameraHelper (spotLight.shadow.camera) );
+
+	  loader = new THREE.TextureLoader();
+	  base = threeDOF.init()
+	  scene.add (base)
+
+	  //let wallMap = loader.load("https://i.imgur.com/wa0s13v.jpg");
+	  let wallMap = loader.load("textures/brick.jpg");
+	  wallMap.wrapS = THREE.RepeatWrapping;
+	  wallMap.wrapT = THREE.RepeatWrapping;
+	  wallMap.repeat.set(2, 2);
+	  let wallMat = new THREE.MeshLambertMaterial({map:wallMap});
+	  let wall  = new THREE.Mesh(new THREE.BoxGeometry(120,120,8), wallMat);
+	  wall.position.set(0,60,-60);
+	  wall.castShadow = true;
+	  wall.receiveShadow = true;
+	  scene.add(wall);
+	  let floorMap = loader.load("textures/floor.jpg");
+	  floorMap.wrapS = THREE.RepeatWrapping;
+	  floorMap.wrapT = THREE.RepeatWrapping;
+	  floorMap.repeat.set(5, 5);
+	  let floorMat = new THREE.MeshLambertMaterial({map:floorMap,side:THREE.DoubleSide});
+	  let floor = new THREE.Mesh(new THREE.PlaneGeometry(200,200),floorMat);
+	  floor.receiveShadow = true;
+	  floor.rotation.x = - Math.PI/2; 
+	  scene.add(floor)
+	  // setting ccdSys
+	  threeDOF.ccdSys = new CCDSys (fk)
+	  // axes are in local frame of body
+	  threeDOF.ccdSys.setCCDAxis (new THREE.Vector3(0, 1, 0), 1)
+	  threeDOF.ccdSys.setCCDAxis (new THREE.Vector3(1, 0, 0), 2); 
+	  threeDOF.ccdSys.setCCDAxis (new THREE.Vector3(1, 0, 0), 3); 
+	  window.addEventListener('resize', onWindowResize, false);
+	}
+
+	function onWindowResize() {
+	  camera.aspect = window.innerWidth / window.innerHeight;
+	  camera.updateProjectionMatrix();
+	  renderer.setSize(window.innerWidth, window.innerHeight);
+	}
+
+	function animate() {
+
+	  var thetas = [0, 0, 0, 0];
+	  //threeDOF.target.set (30*Math.cos(zz/10), 40, 30*Math.sin(zz/10))
+	  theta += 0.05;
+	  threeDOF.target.set (40 * Math.cos(theta), 40 * Math.sin(theta)+60, -50)
+	  //threeDOF.target.set (zz, 60, 50)
+	  tsphere.position.copy (threeDOF.target);
+
+	  threeDOF.ccdSys.solve (threeDOF.target, thetas);
+
+	  threeDOF.update(thetas);
+	  requestAnimationFrame(animate);
+	  render();
+	}
+
+	function render() {
+	  renderer.render(scene, camera);
+	}
+</script>
+</body>
+
+</html>

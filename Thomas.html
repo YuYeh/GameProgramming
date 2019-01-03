@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+<style>
+	body {
+		overflow: hidden;		
+	}
+</style>
+</head>
+
+<body> 
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/96/three.min.js"></script>
+	<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+	<script src="https://rawgit.com/mrdoob/three.js/master/examples/js/loaders/MTLLoader.js"></script>
+	<script src="https://rawgit.com/mrdoob/three.js/master/examples/js/loaders/OBJLoader.js"></script>	
+<script>
+var camera, scene, renderer;
+var controls;
+var train,line;
+var angle,alpha=0;
+var pos1,pos2,quat1,quat2;
+var index = 0;
+var loader = new THREE.TextureLoader();
+init();
+animate();
+
+function buildRailway() {
+  let woodgeometry = new THREE.BoxGeometry(2,1,10);
+  let material = new THREE.MeshLambertMaterial({map:loader.load("textures/CartoonWood.jpg")});
+  let railway = new THREE.Mesh(woodgeometry,material);
+  let railwayMat = new THREE.MeshLambertMaterial({map:loader.load("textures/iron.jpg")});
+  let railwaypart = new THREE.Mesh(new THREE.BoxGeometry(8,2,1),railwayMat );
+  railwaypart.position.set(0,1,3);
+  railway.add(railwaypart)
+  let railwaypart2 = railwaypart.clone();
+  railwaypart2.position.set(0,1,-3);
+  railway.add(railwaypart2)
+  
+  return railway; 
+}
+
+function makeLine() {
+  let railways = []
+  let geometry = new THREE.Geometry();    
+  
+  for(let t = 0; t <= 14;t++) {
+    geometry.vertices.push (new THREE.Vector3(-70+10*t,0,50));
+	railways.push(buildRailway());
+	railways[railways.length-1].position.set(-70+10*t,0.5,50);
+	railways[railways.length-1].castShadow = true;
+    railways[railways.length-1].receiveShadow = true;
+	scene.add(railways[railways.length-1])
+	railways.push(buildRailway());
+	railways[railways.length-1].position.set(-70+10*t+5,0.5,50);
+	railways[railways.length-1].castShadow = true;
+    railways[railways.length-1].receiveShadow = true;
+	scene.add(railways[railways.length-1])
+  }
+  let tmp;
+  for(angle = -Math.PI/2,tmp = 0;Math.abs(angle)<Math.PI/18*27;angle-=0.001,tmp++) {
+	if(tmp%101==1) {	
+	 geometry.vertices.push (new THREE.Vector3(80-50*Math.cos(angle),0,-50*Math.sin(angle)));
+	  railways.push(buildRailway());
+	  railways[railways.length-1].castShadow = true;
+      railways[railways.length-1].receiveShadow = true;
+	  railways[railways.length-1].position.set(80-50*Math.cos(angle),0.5,-50*Math.sin(angle));
+	  railways[railways.length-1].rotation.y = railways[railways.length-1].rotation.y-angle+Math.PI/2;
+	  scene.add(railways[railways.length-1])
+	  tmp = 1;
+	}
+  }
+  for(let t = 1; t <= 16;t++) {
+    geometry.vertices.push (new THREE.Vector3(80-10*t,0,-50)); 
+    railways.push(buildRailway());
+	railways[railways.length-1].castShadow = true;
+    railways[railways.length-1].receiveShadow = true;
+    railways[railways.length-1].position.set(80-10*t,0.5,-50);
+	scene.add(railways[railways.length-1])
+	railways.push(buildRailway());
+	railways[railways.length-1].castShadow = true;
+    railways[railways.length-1].receiveShadow = true;
+	railways[railways.length-1].position.set(80-10*t+5,0.5,-50);
+	scene.add(railways[railways.length-1])
+  }
+   while(Math.abs(angle)<Math.PI*2.5) {
+  	geometry.vertices.push (new THREE.Vector3(-80-50*Math.cos(angle),0,-50*Math.sin(angle)));
+	railways.push(buildRailway());
+	railways[railways.length-1].castShadow = true;
+    railways[railways.length-1].receiveShadow = true;
+	railways[railways.length-1].position.set(-80-50*Math.cos(angle),0.5,-50*Math.sin(angle));
+	railways[railways.length-1].rotation.y = railways[railways.length-1].rotation.y-angle+Math.PI/2
+	scene.add(railways[railways.length-1])
+    angle-=0.1;
+  }
+  geometry.vertices.push (new THREE.Vector3(-70,0,50));
+  railways.push(buildRailway());
+  railways[railways.length-1].castShadow = true;
+  railways[railways.length-1].receiveShadow = true;
+  railways[railways.length-1].position.set(-75,0.5,50);
+  scene.add(railways[railways.length-1])
+  
+  
+  let mat = new THREE.LineDashedMaterial ({color:0xffff00, dashSize: 3, gapSize: 3})
+  mat.visible = false;
+	return new THREE.Line(geometry, mat);
+}
+
+function walkingRoute(i) {
+  var p = new THREE.Vector3();
+  pos1.copy(line.geometry.vertices[i]);
+  if(i+1 == line.geometry.vertices.length)
+  	pos2.copy(line.geometry.vertices[0]);
+  else
+  	pos2.copy(line.geometry.vertices[i+1]);
+  var oldDir =pos2.clone().sub(pos1).normalize();
+	if(i+2 == line.geometry.vertices.length) {
+  	p.copy(line.geometry.vertices[0]);
+  } else {
+ 		p.copy(line.geometry.vertices[i+2]);
+   }
+  let newDir = p.sub(pos2).normalize();
+  
+  var localDir = new THREE.Vector3(1 ,0 ,0);
+  
+  quat1.setFromUnitVectors (localDir, oldDir);
+ 
+  quat2.setFromUnitVectors (localDir, newDir);
+  
+}
+
+function init() {
+  renderer = new THREE.WebGLRenderer({
+    antialias: true
+  });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x888888);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.body.appendChild(renderer.domElement);
+  
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 20000);
+  camera.position.set(120,200,250);
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  
+  // scene
+
+  scene = new THREE.Scene();
+
+  gridxz = new THREE.GridHelper (300, 30,'red','white');
+  //scene.add (gridxz);
+	
+  var ambient = new THREE.AmbientLight(0x444444);
+  scene.add(ambient);
+
+  var spotLight = new THREE.SpotLight(0xffffff);
+  spotLight.position.set(0, 200, -300);
+  spotLight.castShadow = true;
+  spotLight.shadow.mapSize.width = 1024;
+  spotLight.shadow.mapSize.height = 1024;
+  scene.add(spotLight);
+  //scene.add(new THREE.SpotLightHelper( spotLight ));
+  //scene.add ( new THREE.CameraHelper (spotLight.shadow.camera) );
+	
+  train = new THREE.Object3D();
+  // model
+  
+  
+  var onProgress = function(xhr) {
+    if (xhr.lengthComputable) {
+      var percentComplete = xhr.loaded / xhr.total * 100;
+      console.log(Math.round(percentComplete, 2) + '% downloaded');
+    }
+  };
+
+  var onError = function(xhr) {};
+
+  //THREE.Loader.Handlers.add(/\.dds$/i, new THREE.DDSLoader());
+
+  var mtlLoader = new THREE.MTLLoader();
+  mtlLoader.setPath('models/Thomas_Train/');
+ 	mtlLoader.load('materials.mtl', function(materials) {
+	
+    materials.preload();
+
+    var objLoader = new THREE.OBJLoader();
+    objLoader.setMaterials(materials);
+    objLoader.setPath('models/Thomas_Train/');
+    objLoader.load('model.obj', function(object) {
+
+			var theObject =  unitize (object, 20);
+			theObject.rotation.y = -Math.PI/2;
+			train.add (theObject);
+			scene.add(train)			
+			//scene.add (new THREE.BoxHelper (theObject));
+			//////// MATERIAL ADJUSTMENT for porsche ///////////////
+			// transparent window: double-side fix
+			object.traverse (
+				function(mesh) {
+					if (mesh instanceof THREE.Mesh) {
+						mesh.material.side = THREE.DoubleSide;
+						mesh.castShadow = true;
+						mesh.receiveShadow = true;
+					}
+				});
+
+
+    }, onProgress, onError);
+
+  });
+  loader.setCrossOrigin ('');
+  
+  line = makeLine();
+  scene.add(line);
+
+  pos1 = new THREE.Vector3();
+  pos2 = new THREE.Vector3();
+  quat1 = new THREE.Quaternion();
+  quat2 = new THREE.Quaternion();
+  walkingRoute(0);
+  let floorMap = loader.load("textures/stone.jpg");
+  floorMap.wrapS = THREE.RepeatWrapping;
+  floorMap.wrapT = THREE.RepeatWrapping;
+  floorMap.repeat.set(8, 8);
+  let floorMat = new THREE.MeshLambertMaterial({map:floorMap,side:THREE.DoubleSide});
+  let floor = new THREE.Mesh(new THREE.PlaneGeometry(300,200), floorMat);
+  floor.rotation.x = Math.PI/2
+  floor.receiveShadow = true;
+  scene.add(floor)
+  window.addEventListener('resize', onWindowResize, false);
+
+}
+
+function unitize (object, targetSize) {  
+	
+	// find bounding box of 'object'
+	var box3 = new THREE.Box3();
+	box3.setFromObject (object);
+	var size = new THREE.Vector3();
+	size.subVectors (box3.max, box3.min);
+	var center = new THREE.Vector3();
+	center.addVectors(box3.max, box3.min).multiplyScalar (0.5);
+	
+	console.log ('center: ' + center.x + ', '+center.y + ', '+center.z );
+	console.log ('size: ' + size.x + ', ' +  size.y + ', '+size.z );
+	
+	// uniform scaling according to objSize
+	var objSize = findMax (size);
+	var scaleSet = targetSize/objSize;
+				
+	var theObject =  new THREE.Object3D();
+	theObject.add (object);
+	object.scale.set (scaleSet, scaleSet, scaleSet);
+	object.position.set (-center.x*scaleSet, -center.y*scaleSet + size.y/2*scaleSet, -center.z*scaleSet);
+	
+	return theObject;
+	
+	
+	// helper function
+	function findMax(v) {
+		if (v.x > v.y) {
+			return v.x > v.z ? v.x : v.z;
+		} else { // v.y > v.x
+			return v.y > v.z ? v.y : v.z;
+		} 
+	}
+			
+}
+
+
+function onWindowResize() {
+
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+}
+
+
+function animate() {
+
+  controls.update();
+  render();
+  var qm = quat1.clone();
+  qm.slerp (quat2, alpha);
+  //console.log(qm)
+  train.quaternion.copy (qm);
+  //train.position.set (100,0,0);
+  var pp = pos1.clone();
+  pp.lerp (pos2, alpha);
+  train.position.copy (pp);
+  alpha += 0.1;
+  if(alpha> 1) {
+    alpha = 0;
+    if(++index < line.geometry.vertices.length-1) {
+      walkingRoute(index);
+    } else {
+      index = 0;
+      walkingRoute(index)
+    }
+  }
+  requestAnimationFrame(animate);
+  
+
+}
+
+function render() {
+
+  renderer.render(scene, camera);
+
+}
+
+
+</script>
+</body>
+
+</html>
