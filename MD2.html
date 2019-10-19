@@ -325,13 +325,13 @@ class Platform {
 				};
 				var onError = function(xhr) {};
 				var mtlLoader = new THREE.MTLLoader();
-				//mtlLoader.setPath('models/Ring2/');
-				mtlLoader.load('models/Ring2/aztec-ring-2.mtl', function(materials) {
+				mtlLoader.setPath('models/Ring2/');
+				mtlLoader.load('aztec-ring-2.mtl', function(materials) {
 					materials.preload();
 					var objLoader = new THREE.OBJLoader();
 					objLoader.setMaterials(materials);
-					//objLoader.setPath('models/Ring2/');
-					objLoader.load('models/Ring2/aztec-ring-2.obj', function(object) {
+					objLoader.setPath('models/Ring2/');
+					objLoader.load('aztec-ring-2.obj', function(object) {
 						ring.visible = true;
 						ring.add(unitize (object, 30));
 						ring.position.set(350, 0, 380);
