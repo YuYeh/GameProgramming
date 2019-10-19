@@ -36,7 +36,7 @@
 	<button id="play" style="width:20%">Pause</button> 
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/94/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/109/three.min.js"></script>
 <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
 <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 <script src="https://threejs.org/examples/js/loaders/MTLLoader.js"></script>
@@ -325,13 +325,13 @@ class Platform {
 				};
 				var onError = function(xhr) {};
 				var mtlLoader = new THREE.MTLLoader();
-				mtlLoader.setPath('models/Ring2/');
-				mtlLoader.load('aztec-ring-2.mtl', function(materials) {
+				//mtlLoader.setPath('models/Ring2/');
+				mtlLoader.load('models/Ring2/aztec-ring-2.mtl', function(materials) {
 					materials.preload();
 					var objLoader = new THREE.OBJLoader();
 					objLoader.setMaterials(materials);
-					objLoader.setPath('models/Ring2/');
-					objLoader.load('aztec-ring-2.obj', function(object) {
+					//objLoader.setPath('models/Ring2/');
+					objLoader.load('models/Ring2/aztec-ring-2.obj', function(object) {
 						ring.visible = true;
 						ring.add(unitize (object, 30));
 						ring.position.set(350, 0, 380);

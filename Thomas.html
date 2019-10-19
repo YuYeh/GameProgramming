@@ -11,7 +11,7 @@
 </head>
 
 <body> 
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/96/three.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/107/three.min.js"></script>
 	<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
 	<script src="https://rawgit.com/mrdoob/three.js/master/examples/js/loaders/MTLLoader.js"></script>
 	<script src="https://rawgit.com/mrdoob/three.js/master/examples/js/loaders/OBJLoader.js"></script>	
@@ -176,19 +176,18 @@ function init() {
   };
 
   var onError = function(xhr) {};
-
   //THREE.Loader.Handlers.add(/\.dds$/i, new THREE.DDSLoader());
 
   var mtlLoader = new THREE.MTLLoader();
-  mtlLoader.setPath('models/Thomas_Train/');
- 	mtlLoader.load('materials.mtl', function(materials) {
+  //mtlLoader.setPath('models/Thomas_Train/');
+ 	mtlLoader.load('models/Thomas_Train/materials.mtl', function(materials) {
 	
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials(materials);
-    objLoader.setPath('models/Thomas_Train/');
-    objLoader.load('model.obj', function(object) {
+    //objLoader.setPath('models/Thomas_Train/');
+    objLoader.load('models/Thomas_Train/model.obj', function(object) {
 
 			var theObject =  unitize (object, 20);
 			theObject.rotation.y = -Math.PI/2;
