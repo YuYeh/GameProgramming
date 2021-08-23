@@ -26,7 +26,7 @@
 
 // };
 THREE.MorphBlendMesh = class extends THREE.Mesh{
-	constructor(this,geometry, material) {
+	constructor(geometry, material) {
 		super();
 		this.animationsMap = {};
 		this.animationsList = [];
