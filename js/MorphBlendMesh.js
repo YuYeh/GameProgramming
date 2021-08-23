@@ -2,28 +2,49 @@
  * @author alteredq / http://alteredqualia.com/
  */
 
-THREE.MorphBlendMesh = function ( geometry, material ) {
+// THREE.MorphBlendMesh = function ( geometry, material ) {
 
-	THREE.Mesh.call( this, geometry, material );
+	// THREE.Mesh.call( this, geometry, material );
 
-	this.animationsMap = {};
-	this.animationsList = [];
+	// this.animationsMap = {};
+	// this.animationsList = [];
 
-	// prepare default animation
-	// (all frames played together in 1 second)
+	prepare default animation
+	(all frames played together in 1 second)
 
-	var numFrames = Object.keys( this.morphTargetDictionary ).length;
+	// var numFrames = Object.keys( this.morphTargetDictionary ).length;
 
-	var name = '__default';
+	// var name = '__default';
 
-	var startFrame = 0;
-	var endFrame = numFrames - 1;
+	// var startFrame = 0;
+	// var endFrame = numFrames - 1;
 
-	var fps = numFrames / 1;
+	// var fps = numFrames / 1;
 
-	this.createAnimation( name, startFrame, endFrame, fps );
-	this.setAnimationWeight( name, 1 );
+	// this.createAnimation( name, startFrame, endFrame, fps );
+	// this.setAnimationWeight( name, 1 );
 
+// };
+THREE.MorphBlendMesh = class extends THREE.Mesh{
+	constructor(geometry, material) {
+		this.animationsMap = {};
+		this.animationsList = [];
+
+		// prepare default animation
+		// (all frames played together in 1 second)
+
+		var numFrames = Object.keys( this.morphTargetDictionary ).length;
+
+		var name = '__default';
+
+		var startFrame = 0;
+		var endFrame = numFrames - 1;
+
+		var fps = numFrames / 1;
+
+		this.createAnimation( name, startFrame, endFrame, fps );
+		this.setAnimationWeight( name, 1 );
+	};
 };
 
 THREE.MorphBlendMesh.prototype = Object.assign( Object.create( THREE.Mesh.prototype ), {

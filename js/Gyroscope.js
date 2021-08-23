@@ -9,7 +9,7 @@
 // };
 
 THREE.Gyroscope = class extends THREE.Object3D{
-  constructor(height, width) {
+  constructor() {
     super();
   }
 };
