@@ -2,10 +2,16 @@
  * @author alteredq / http://alteredqualia.com/
  */
 
-THREE.Gyroscope = function () {
+// THREE.Gyroscope = function () {
 
-	THREE.Object3D.call( this );
+	// THREE.Object3D.call( this );
 
+// };
+
+THREE.Gyroscope = class extends THREE.Object3D{
+  constructor(height, width) {
+    super();
+  }
 };
 
 THREE.Gyroscope.prototype = Object.create( THREE.Object3D.prototype );
