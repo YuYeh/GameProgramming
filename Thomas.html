@@ -11,7 +11,7 @@
 </head>
 
 <body> 
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/109/three.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 	<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
 	<script src="https://rawgit.com/mrdoob/three.js/master/examples/js/loaders/MTLLoader.js"></script>
 	<script src="https://rawgit.com/mrdoob/three.js/master/examples/js/loaders/OBJLoader.js"></script>	
@@ -43,10 +43,13 @@ function buildRailway() {
 
 function makeLine() {
   let railways = []
-  let geometry = new THREE.Geometry();    
-  
+  <!-- let geometry = new THREE.Geometry();     -->
+  let geometry = new THREE.BufferGeometry()
+  const pointsArray = new Array()
   for(let t = 0; t <= 14;t++) {
-    geometry.vertices.push (new THREE.Vector3(-70+10*t,0,50));
+    <!-- geometry.vertices.push (new THREE.Vector3(-70+10*t,0,50)); -->
+	pointsArray.push(new THREE.Vector3(-70+10*t,0,50));
+	<!-- geometry.setFromPoints(pointsArray) -->
 	railways.push(buildRailway());
 	railways[railways.length-1].position.set(-70+10*t,0.5,50);
 	railways[railways.length-1].castShadow = true;
@@ -61,7 +64,9 @@ function makeLine() {
   let tmp;
   for(angle = -Math.PI/2,tmp = 0;Math.abs(angle)<Math.PI/18*27;angle-=0.001,tmp++) {
 	if(tmp%101==1) {	
-	 geometry.vertices.push (new THREE.Vector3(80-50*Math.cos(angle),0,-50*Math.sin(angle)));
+	 <!-- geometry.vertices.push (new THREE.Vector3(80-50*Math.cos(angle),0,-50*Math.sin(angle))); -->
+	  pointsArray.push(new THREE.Vector3(80-50*Math.cos(angle),0,-50*Math.sin(angle)));
+	  <!-- geometry.setFromPoints(pointsArray); -->
 	  railways.push(buildRailway());
 	  railways[railways.length-1].castShadow = true;
       railways[railways.length-1].receiveShadow = true;
@@ -72,7 +77,9 @@ function makeLine() {
 	}
   }
   for(let t = 1; t <= 16;t++) {
-    geometry.vertices.push (new THREE.Vector3(80-10*t,0,-50)); 
+    <!-- geometry.vertices.push (new THREE.Vector3(80-10*t,0,-50));  -->
+	pointsArray.push(new THREE.Vector3(80-10*t,0,-50));
+	<!-- geometry.setFromPoints(pointsArray); -->
     railways.push(buildRailway());
 	railways[railways.length-1].castShadow = true;
     railways[railways.length-1].receiveShadow = true;
@@ -85,7 +92,9 @@ function makeLine() {
 	scene.add(railways[railways.length-1])
   }
    while(Math.abs(angle)<Math.PI*2.5) {
-  	geometry.vertices.push (new THREE.Vector3(-80-50*Math.cos(angle),0,-50*Math.sin(angle)));
+  	<!-- geometry.vertices.push (new THREE.Vector3(-80-50*Math.cos(angle),0,-50*Math.sin(angle))); -->
+	pointsArray.push(new THREE.Vector3(-80-50*Math.cos(angle),0,-50*Math.sin(angle)));
+	<!-- geometry.setFromPoints(pointsArray); -->
 	railways.push(buildRailway());
 	railways[railways.length-1].castShadow = true;
     railways[railways.length-1].receiveShadow = true;
@@ -94,13 +103,14 @@ function makeLine() {
 	scene.add(railways[railways.length-1])
     angle-=0.1;
   }
-  geometry.vertices.push (new THREE.Vector3(-70,0,50));
+  <!-- geometry.vertices.push (new THREE.Vector3(-70,0,50)); -->
+  pointsArray.push(new THREE.Vector3(-70,0,50));
+  geometry.setFromPoints(pointsArray)
   railways.push(buildRailway());
   railways[railways.length-1].castShadow = true;
   railways[railways.length-1].receiveShadow = true;
   railways[railways.length-1].position.set(-75,0.5,50);
   scene.add(railways[railways.length-1])
-  
   
   let mat = new THREE.LineDashedMaterial ({color:0xffff00, dashSize: 3, gapSize: 3})
   mat.visible = false;
@@ -109,16 +119,23 @@ function makeLine() {
 
 function walkingRoute(i) {
   var p = new THREE.Vector3();
-  pos1.copy(line.geometry.vertices[i]);
-  if(i+1 == line.geometry.vertices.length)
-  	pos2.copy(line.geometry.vertices[0]);
+  <!-- pos1.copy(line.geometry.vertices[i]); -->
+  pos1.copy(new THREE.Vector3().fromArray(line.geometry.attributes.position.array, i * 3));
+  <!-- if(i+1 == line.geometry.vertices.length) -->
+  if(i+1 == line.geometry.attributes.position.count)
+  	<!-- pos2.copy(line.geometry.vertices[0]); -->
+  	pos2.copy(new THREE.Vector3().fromArray(line.geometry.attributes.position.array, 0 * 3));
   else
-  	pos2.copy(line.geometry.vertices[i+1]);
+  	<!-- pos2.copy(line.geometry.vertices[i+1]); -->
+  	pos2.copy(new THREE.Vector3().fromArray(line.geometry.attributes.position.array, (i+1) * 3));
   var oldDir =pos2.clone().sub(pos1).normalize();
-	if(i+2 == line.geometry.vertices.length) {
-  	p.copy(line.geometry.vertices[0]);
+	<!-- if(i+2 == line.geometry.vertices.length) { -->
+	if(i+2 == line.geometry.attributes.position.count) {
+  	<!-- p.copy(line.geometry.vertices[0]); -->
+  	p.copy(new THREE.Vector3().fromArray(line.geometry.attributes.position.array, 0 * 3));
   } else {
- 		p.copy(line.geometry.vertices[i+2]);
+ 		<!-- p.copy(line.geometry.vertices[i+2]); -->
+ 		p.copy(new THREE.Vector3().fromArray(line.geometry.attributes.position.array, (i+2) * 3));
    }
   let newDir = p.sub(pos2).normalize();
   
@@ -294,7 +311,8 @@ function animate() {
   alpha += 0.1;
   if(alpha> 1) {
     alpha = 0;
-    if(++index < line.geometry.vertices.length-1) {
+    <!-- if(++index < line.geometry.vertices.length-1) { -->
+    if(++index < line.geometry.attributes.position.count-1) {
       walkingRoute(index);
     } else {
       index = 0;
