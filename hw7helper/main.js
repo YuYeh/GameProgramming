@@ -87,7 +87,10 @@ function animate() {
   if (scene.targets.length > 0)
   	requestAnimationFrame(animate);
   else
-  	alert ('game over')
+	if (agentJ.score<agentK.score)
+		alert (agentK.name+ " Win!")
+	else
+		alert (agentJ.name+ " Win!")
 
   render();
 }
