@@ -9,8 +9,8 @@ THREE.MorphBlendMesh = function ( geometry, material ) {
 	this.animationsMap = {};
 	this.animationsList = [];
 
-	prepare default animation
-	(all frames played together in 1 second)
+	// prepare default animation
+	// (all frames played together in 1 second)
 
 	var numFrames = Object.keys( this.morphTargetDictionary ).length;
 
