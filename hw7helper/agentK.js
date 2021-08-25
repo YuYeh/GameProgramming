@@ -19,14 +19,14 @@ function agentMesh (size, colorName='red') {
 
 class Agent {
   constructor(pos, halfSize) {
-  	this.name = "Mr.Chiu";
+  	this.name = "Mr.Chiu2";
     this.pos = pos.clone();
     this.vel = new THREE.Vector3();
     this.force = new THREE.Vector3();
     this.target = null;
     this.halfSize = halfSize;  // half width
     this.mesh = agentMesh (this.halfSize, 'orange');
-    this.MAXSPEED = 500000; //50
+    this.MAXSPEED = 400; //50
     this.ARRIVAL_R = 120; //30
 
     this.score = 0;
@@ -56,7 +56,7 @@ class Agent {
     let dist = 1e10;
     let vhat = this.vel.clone().normalize();
     const REACH = 130; //50
-    const K = 20 //5
+    const K = 65 //5
     let perp;
     for (let i = 0; i < obs.length; i++) {
       let point = obs[i].center.clone().sub (this.pos) // c-p

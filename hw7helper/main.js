@@ -74,9 +74,10 @@ function randomStart() {
 
 function animate() {
 
+  agentJ.setEnemy(agentK)
+  agentK.setEnemy(agentJ)
   agentJ.update(0.01)
   agentK.update(0.01)
-
   $('#score').text (agentJ.name + '[' + agentJ.score.toFixed(1) + '] ... ' + agentK.name + '[' + agentK.score.toFixed(1) + ']');
 
   // check agent crossing obstacles ...

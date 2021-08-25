@@ -26,7 +26,7 @@ class Agent {
     this.target = null;
     this.halfSize = halfSize;  // half width
     this.mesh = agentMesh (this.halfSize, 'cyan');
-    this.MAXSPEED = 500000;
+    this.MAXSPEED = 550;
     this.ARRIVAL_R = 100;
 
     this.score = 0;
@@ -66,7 +66,6 @@ class Agent {
 
 					let overlap = obs[i].size + this.halfSize - perp.length();
 					if (overlap > 0 ) {
-						console.log('fuck')
 						perp.setLength (K*overlap);
 						perp.negate();
 						this.force.add (perp);
@@ -123,9 +122,9 @@ class Agent {
   targetInducedForce(targetPos) {
     return targetPos.clone().sub(this.pos).normalize().multiplyScalar(this.MAXSPEED).sub(this.vel)
   }
-	setEnemy(otherAgent) {
-		this.enemy = otherAgent;
-	}
+  setEnemy(otherAgent) {
+	this.enemy = otherAgent;
+  }
   accumulateForce() {
     // seek
     this.force.copy(this.targetInducedForce(this.target.pos));
