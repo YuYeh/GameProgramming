@@ -53,5 +53,3 @@ Two-link, Dat-GUI以及Gyroscope的應用，讓阿愣進行週期性跳舞，也
 #### Steer, Class
 
 基於Steer加入Class的方式，使不同個體互相競爭，搶奪物件並迴避障礙物。
-
-。
