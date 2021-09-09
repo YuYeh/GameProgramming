@@ -26,11 +26,10 @@ class Agent {
     this.target = null;
     this.halfSize = halfSize;  // half width
     this.mesh = agentMesh (this.halfSize, 'orange');
-    this.MAXSPEED = 400; //50
-    this.ARRIVAL_R = 120; //30
+    this.MAXSPEED = 500; //50
+    this.ARRIVAL_R = 100; //30
 
     this.score = 0;
-
     // for orientable agent
     this.angle = 0;
     scene.add (this.mesh);
@@ -55,8 +54,8 @@ class Agent {
     let theOne = null;
     let dist = 1e10;
     let vhat = this.vel.clone().normalize();
-    const REACH = 130; //50
-    const K = 65 //5
+    const REACH = 110; //50
+    const K = 67 //5
     let perp;
     for (let i = 0; i < obs.length; i++) {
       let point = obs[i].center.clone().sub (this.pos) // c-p

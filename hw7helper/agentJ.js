@@ -53,8 +53,8 @@ class Agent {
     // pick the most threatening one
     // apply the repulsive force
     // (write your code here)
-		const REACH = 100;
-		const K = 65;
+		const REACH = 110;
+		const K = 67;
 		let vhat = this.vel.clone().normalize();
 		for(let i = 0; i < obs.length; i++) {
 
